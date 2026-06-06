@@ -1,0 +1,82 @@
+name: FakeStore API Tests
+
+on:
+  push:
+  pull_request:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  test:
+    name: Run FakeStore API automation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Print FakeStore API diagnostics
+        shell: bash
+        run: |
+          echo "Checking FakeStore API from GitHub runner..."
+          curl --location --include --silent --show-error --max-time 15 https://fakestoreapi.com/carts | head -40 || true
+          echo
+          echo "If this shows 403/429/5xx, the live API is reachable differently from GitHub than from local."
+
+      - name: Run Playwright API tests
+        run: npm run test:ci
+
+      - name: Show Playwright test summary
+        if: always()
+        shell: bash
+        run: |
+          node -e "
+          const fs = require('fs');
+          const resultFile = 'test-results/results.json';
+          if (!fs.existsSync(resultFile)) {
+            fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, '## Playwright API Test Summary\n\nNo result file was generated.\n');
+            process.exit(0);
+          }
+          const results = JSON.parse(fs.readFileSync(resultFile, 'utf8'));
+          const stats = results.stats || {};
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, [
+            '## Playwright API Test Summary',
+            '',
+            '| Status | Count |',
+            '| --- | ---: |',
+            '| Passed | ' + (stats.expected || 0) + ' |',
+            '| Failed | ' + (stats.unexpected || 0) + ' |',
+            '| Flaky | ' + (stats.flaky || 0) + ' |',
+            '| Skipped | ' + (stats.skipped || 0) + ' |',
+            '',
+          ].join('\n'));
+          "
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: playwright-api-report
+          path: playwright-report/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: playwright-api-results
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 14
