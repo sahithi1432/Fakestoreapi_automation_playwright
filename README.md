@@ -105,7 +105,7 @@ It installs dependencies, runs the Playwright API suite, and uploads reports/res
 
 ## Extension Plan
 
-- Parallelisation: Playwright `fullyParallel` is enabled. Local runs use Playwright's default worker count, and CI uses 2 workers for stable execution.
+- Parallelisation: The suite is currently configured to run serially in CI with 1 worker for stable execution against the public FakeStore API. Local runs can use Playwright's default worker behavior.
 - Reporting: Add Allure or dashboard reporting for trends, response-time history, and endpoint-level pass/fail summaries.
 - Contract testing: Expand contract files for auth, product, user, and cart list responses.
 - Test expansion: Add boundary tests for cart dates, user IDs, product quantities, query params, and cross-resource consistency with `/products`.
